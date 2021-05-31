@@ -42,6 +42,10 @@ dependencies:
   sqflite: any
   path: any
 
+  
+  flutter_spinkit: any
+  animated_text_kit: any
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -60,7 +64,7 @@ flutter:
   assets:
     - assets/arrow.svg
     - assets/arrow.png
-    - assets/data/bfro_reports_geocoded.csv
+    - assets/data/sightings.db
 
   # To add assets to your application, add an assets section, like this:
   # assets:

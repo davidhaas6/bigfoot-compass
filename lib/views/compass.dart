@@ -1,4 +1,7 @@
+import 'package:bigfoot/controllers/app_context.dart';
+import 'package:bigfoot/controllers/database.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:vector_math/vector_math_64.dart' hide Colors;
 import 'package:motion_sensors/motion_sensors.dart';
 import 'shapes.dart';
@@ -6,7 +9,6 @@ import 'dart:math' as math;
 
 import 'package:matrix4_transform/matrix4_transform.dart';
 import 'package:align_positioned/align_positioned.dart';
-
 
 class Compass extends StatefulWidget {
   @override
@@ -19,19 +21,21 @@ class _CompassState extends State<Compass> with SingleTickerProviderStateMixin {
   Vector3? _lastOrientation;
 
   // threshold to update/animate compass to a new position (radians)
-  static const num _UPDATE_THRESH = 5 * math.pi / 180; 
+  static const num _UPDATE_THRESH = 5 * math.pi / 180;
 
   // number of samples in the rolling average filter
   static const num _FILTER_SIZE = 5;
 
-  // array to store raw headings for the rolling average filter (radians) 
+  // array to store raw headings for the rolling average filter (radians)
   List<num> _headingBuffer = [];
-  double _filteredHeading = 0;  // the resulting heading of the filter (degrees)
+  double _filteredHeading = 0; // the resulting heading of the filter (degrees)
 
   int? _groupValue = 0;
 
   Animation<double>? animation;
   AnimationController? controller;
+
+  Future database = SightingsDB.instance.database;
 
   @override
   void initState() {
@@ -88,13 +92,12 @@ class _CompassState extends State<Compass> with SingleTickerProviderStateMixin {
             _lastOrientation = Vector3.copy(_orientation);
           }
         });
-      }
-      else {
+      } else {
         print('unavailable');
       }
     });
 
-    print('initialized');
+    print('compass initialized');
   }
 
   void setUpdateInterval(int? groupValue, int interval) {
@@ -107,8 +110,60 @@ class _CompassState extends State<Compass> with SingleTickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    AppContext appContext = Provider.of<AppContext>(context);
+    print("starting compass build");
     // print(animation?.value);
-    return buildCompass();
+    return Column(
+      children: [
+        FutureBuilder(
+          future: SightingsDB.instance.queryAll(),
+          builder: (BuildContext context, AsyncSnapshot snapshot) {
+            var children;
+            if (snapshot.hasData) {
+              var sightings = snapshot.data;
+              print(sightings[0]);
+              print(sightings.length);
+
+              children = <Widget>[
+                Padding(
+                  padding: EdgeInsets.symmetric(vertical: 20),
+                  child: Text('${sightings[0].toString()}'),
+                )
+              ];
+
+            } else if (snapshot.hasError) {
+              children = <Widget>[
+                Padding(
+                  padding: EdgeInsets.symmetric(vertical: 20),
+                  child: Text('error'),
+                )
+              ];
+            } else {
+              children = const <Widget>[
+                SizedBox(
+                  child: CircularProgressIndicator(),
+                  width: 60,
+                  height: 60,
+                ),
+                Padding(
+                  padding: EdgeInsets.only(top: 16),
+                  child: Text('Awaiting result...'),
+                )
+              ];
+            }
+            return Center(
+                child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: children,
+            ));
+          },
+        ),
+        // TextButton(onPressed: () => , child: child)
+
+        // buildCompass(),
+      ],
+    );
   }
 
   Widget buildCompass() {

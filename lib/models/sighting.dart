@@ -41,7 +41,7 @@ class Sighting {
         this.lat = sightingMap['latitude'],
         this.lon = sightingMap['longitude'],
         this.id = sightingMap['number'],
-        this.estimatedLocation = sightingMap['loc_estimated'],
+        this.estimatedLocation = sightingMap['loc_estimated'] == 1,
         this.locationDetails = sightingMap['location_details'],
         this.reportTitle = sightingMap['title'],
         this.description = sightingMap['observed'],

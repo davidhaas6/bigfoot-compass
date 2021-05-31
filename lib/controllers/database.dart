@@ -1,10 +1,13 @@
+import 'dart:io';
+
 import 'package:flutter/widgets.dart';
 import 'dart:async';
+import 'dart:typed_data';
+import 'package:flutter/services.dart';
 
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:maps_toolkit/maps_toolkit.dart';
-
 
 import '../models/sighting.dart';
 
@@ -31,15 +34,41 @@ class SightingsDB {
   }
 
   _initDatabase() async {
-    // Avoid errors caused by flutter upgrade.
-    WidgetsFlutterBinding.ensureInitialized();
+    //https://github.com/tekartik/sqflite/blob/master/sqflite/doc/opening_asset_db.md
 
     // Open the database and store the reference.
-    var dbPath = await getDatabasesPath();
-    print(dbPath);
-    return await openDatabase(
-      join(dbPath, _databaseName),
-    );
+
+    var databasesPath = await getDatabasesPath();
+    var path = join(databasesPath, _databaseName);
+
+    // Check if the database exists
+    var exists = await databaseExists(path);
+
+    print('path: ${databasesPath}  /  db exists: ${exists}');
+
+    // if (!exists) {
+    // Should happen only the first time you launch your application
+    print("Creating new db copy from asset");
+
+    // Make sure the parent directory exists
+    try {
+      await Directory(dirname(path)).create(recursive: true);
+    } catch (_) {}
+
+    // Copy from asset
+    ByteData data =
+        await rootBundle.load(join("assets", "data", _databaseName));
+    List<int> bytes =
+        data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+
+    // Write and flush the bytes written
+    await File(path).writeAsBytes(bytes, flush: true);
+    // } else {
+    //   print("Opening existing database");
+    // }
+    // open the database
+    print("Opening database");
+    return await openDatabase(path, readOnly: true);
   }
 
   // Helper methods
@@ -60,10 +89,11 @@ class SightingsDB {
   // a key-value list of columns.
   Future<List<Sighting>> queryAll() async {
     Database db = await instance.database;
-    return await db.query(table).then(
-          (rows) => rows
-              .map((row) => Sighting.fromMap(row))
-              .toList(), // Map each row to a sighting
+
+    return await db.query(table).then((rows) {
+      // print(rows[0]);
+      return rows.map((row) => Sighting.fromMap(row)).toList();
+    } // Map each row to a sighting
         );
   }
 
@@ -71,7 +101,8 @@ class SightingsDB {
     Database db = await instance.database;
     return await db.query(table, columns: ['latitude', 'longitude']).then(
       (rows) => rows
-          .map((row) => LatLng(row['latitude'] as double, row['longitude'] as double))
+          .map((row) =>
+              LatLng(row['latitude'] as double, row['longitude'] as double))
           .toList(), // Map each row to a sighting
     );
   }
@@ -89,5 +120,16 @@ class SightingsDB {
   Future<int> delete(int id) async {
     Database db = await instance.database;
     return await db.delete(table, where: '$idCol = ?', whereArgs: [id]);
+  }
+
+  printTables() async {
+    Database db = await instance.database;
+    var tableNames = (await db
+            .query('sqlite_master', where: 'type = ?', whereArgs: ['table']))
+        .map((row) => row['name'] as String)
+        .toList(growable: false);
+
+    print('tables:');
+    print(tableNames);
   }
 }

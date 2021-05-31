@@ -1,3 +1,4 @@
+import 'package:bigfoot/views/loading.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -19,7 +20,7 @@ void main() async {
         appBar: AppBar(
           title: const Text('Bigfooter'),
         ),
-        body: Compass(),
+        body: LoadingScreen(),
       ),
     ),
   ));
