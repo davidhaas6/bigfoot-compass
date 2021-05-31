@@ -1,0 +1,4 @@
+
+enum Creature {
+  Bigfoot,
+}
